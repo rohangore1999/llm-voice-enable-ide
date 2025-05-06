@@ -52,15 +52,15 @@ def main():
 
 main()
 
-async def speak() -> None:
-    async with openai.audio.speech.with_streaming_response.create(
-        model="gpt-4o-mini-tts",
-        voice="coral",
-        input="Today is a wonderful day to build something people love!",
-        instructions="Speak in a cheerful and positive tone.",
-        response_format="pcm",
-    ) as response:
-        await LocalAudioPlayer().play(response)
+# async def speak() -> None:
+#     async with openai.audio.speech.with_streaming_response.create(
+#         model="gpt-4o-mini-tts",
+#         voice="coral",
+#         input="Today is a wonderful day to build something people love!",
+#         instructions="Speak in a cheerful and positive tone.",
+#         response_format="pcm",
+#     ) as response:
+#         await LocalAudioPlayer().play(response)
 
-if __name__ == "__main__":
-    asyncio.run(speak())
+# if __name__ == "__main__":
+#     asyncio.run(speak())
