@@ -19,7 +19,7 @@ def run_command(cmd: str):
     eg: ls -> list all the files
     """
     result = os.system(command=cmd)
-    result
+    return result
     
 # create tool node for langgraph (from prebuild langgraph)
 tool_node = ToolNode(tools=[run_command])
@@ -37,7 +37,7 @@ class State(TypedDict):
     
 def chatbot(state: State):
     SYSTEM_PROMPT = SystemMessage(content="""
-                                  You are an AI coding assistant who takes the input from the user and based on available tools you choose the correct toll and execute the command.
+                                  You are an AI coding assistant who takes the input from the user and based on available tools you choose the correct tool and execute the command.
                                   
                                   You can even execute the commands and help user with the output of the command
                                   
@@ -49,15 +49,13 @@ def chatbot(state: State):
                                   """)
     
     message = llm_with_tool.invoke([SYSTEM_PROMPT] + state["messages"])
-    # The message object is a dictionary that contains the LLM's response and any tool calls it made.
-
-    """
-    the assertion is checking that the number of tool calls in the message object is either 0 or 1 (not more than 1). This means the code is enforcing that the LLM can only make at most one tool call per message.
-    """
-    assert len(message.tool_calls) <= 1
-    # only run if last messages is not a tool call
-    # read existing messages and adding the llm messages
-    return {"messages": [message]}
+    
+    if not message.tool_calls:
+        # If there are no tool calls, just return the message
+        return {"messages": state["messages"] + [message]}
+    
+    # Return the tool calls to be processed by the tool node
+    return {"messages": state["messages"] + [message], "tool_calls": message.tool_calls}
 
 # initializing graph
 graph_builder = StateGraph(State)

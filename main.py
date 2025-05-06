@@ -11,8 +11,18 @@ from openai.helpers import LocalAudioPlayer
 openai = AsyncOpenAI()
 
 MONGODB_URI = "mongodb://admin:admin@localhost:27017/"
-config = {"configurable": {"thread_id": "10"}} # thread_id is to uniquely identify each flow of state
+config = {"configurable": {"thread_id": "200"}} # thread_id is to uniquely identify each flow of state
 
+async def speak(text) -> None:
+    async with openai.audio.speech.with_streaming_response.create(
+        model="gpt-4o-mini-tts",
+        voice="coral",
+        input=text,
+        instructions="Speak in a cheerful and positive tone.",
+        response_format="pcm",
+    ) as response:
+        await LocalAudioPlayer().play(response)
+        
 def main():
     # for each init(); storing messages in mongodb, so that when it execute again it will load from that state
     with MongoDBSaver.from_conn_string(MONGODB_URI) as checkpointer:
@@ -40,9 +50,19 @@ def main():
                     
                     print(f"You said: {speech_to_text}")
                     
+                    latest_message = None
+                    # Process the conversation with tool handling
                     for event in graph_with_mongo.stream({"messages": [{"role": "user", "content": speech_to_text}]}, config, stream_mode="values"):
                         if "messages" in event:
-                            event["messages"][-1].pretty_print()
+                            # Print the latest message
+                            latest_message = event["messages"][-1]
+                            # latest_message.pretty_print()
+                            print(latest_message.content)
+
+                    print("Latest message:", latest_message.content)
+                    if latest_message.content is not None:
+                        # Speak the latest message
+                        asyncio.run(speak(latest_message.content))
                         
                 except sr.UnknownValueError:
                     print("Google Speech Recognition could not understand audio")
@@ -52,15 +72,5 @@ def main():
 
 main()
 
-# async def speak() -> None:
-#     async with openai.audio.speech.with_streaming_response.create(
-#         model="gpt-4o-mini-tts",
-#         voice="coral",
-#         input="Today is a wonderful day to build something people love!",
-#         instructions="Speak in a cheerful and positive tone.",
-#         response_format="pcm",
-#     ) as response:
-#         await LocalAudioPlayer().play(response)
 
-# if __name__ == "__main__":
-#     asyncio.run(speak())
+
